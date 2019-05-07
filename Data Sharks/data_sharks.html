@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<!--
+Sam Macpherson, Jeremy Karsikas, Tom Yan
+October 23, 2015
+A game to simulate a cyber-warfare based adventure
+-->
+<html>
+    <head>
+        <title>Data Sharks</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            #container {
+                margin: 0 auto;
+                width: 1100px;
+            }
+            h2 {
+                font-family: "Consolas", Helvetica, sans-serif;
+                margin-top: -2px;
+                margin-bottom: 5px;
+            }
+            canvas {
+                margin-top: -2px;
+
+            }
+            #start {
+                border-radius: 15px;
+                position: relative;
+                bottom: 370px;
+                left: 465px;
+                font-family: Arial, Helvetica, sans-serif;
+                background-color: #045FB4;
+                width: 80px;
+                padding: 30px 30px;
+                font-size: 200%;
+
+            }
+            #start:hover {
+                background-color: #084B8A;
+                cursor: pointer;
+            }
+            button {
+                -webkit-user-select: none;
+                -khtml-user-select: none;
+                -moz-user-select: none;
+                -o-user-select: none;
+                cursor: pointer; 
+                -moz-border-radius: 5px;
+                -webkit-border-radius: 5px;
+                border-radius:6px;
+                text-decoration: none;
+                width: 330px;
+                height: 40px;
+                position: relative;
+                margin-top: -20px;
+                margin-right: -3.5px;
+                font-family: "Tahoma",Geneva,sans-serif;
+                font-size: 20px;
+			   visibility: hidden;
+            }
+        </style>
+    </head>
+    <body>
+
+        <div id="container">
+            <h2 id = "title"></h2>
+            <canvas id = "canvas" width=1100 height=565 style="border:none"></canvas>
+            <button id="attackBackButton" type="button" onclick="mDown(0)" style="width:221px">Launch Attack!</button>
+            <button id="buy" type="button" onclick="mDown(1)">Buy/Upgrade</button>
+            <button id="sell" type="button" onclick="mDown(2)">Sell</button>
+            <button id="turn" type="button" style="width: 221px" onclick="mDown(3)">Next Turn</button>
+            <div id = "start" onclick = "mDown2(this)">PLAY</div>
+
+        </div>
+        <script>
+
+            var canvas = document.getElementById("canvas");
+            var ctx = canvas.getContext("2d");
+
+
+            //images
+            var informationDefaultImage = new Image();
+            informationDefaultImage.src = "images/informationPanelDefault.png";
+            var informationPanel = new Image();
+            informationPanel.src = "images/informationPanel.png";
+            var buyMenuBackground = new Image();
+            buyMenuBackground.src = "images/buyMenuBackground.png";
+            var sellMenuBackground = new Image();
+            sellMenuBackground.src = "images/sellMenuBackground.png";
+            var informationPanel2 = new Image();
+            informationPanel2.src = "images/informationPanelWithInfo.png";
+
+            var buyHackerImage = new Image();
+            buyHackerImage.src = "images/buyHackerImage.png";
+            var buyServerImage = new Image();
+            buyServerImage.src = "images/buyServerImage.png";
+            var buySchoolImage = new Image();
+            buySchoolImage.src = "images/buySchoolImage.png";
+            var buyInternetSecurityImage = new Image();
+            buyInternetSecurityImage.src = "images/buyInternetSecurityImage.png";
+            var sellServerImage = new Image();
+            sellServerImage.src = "images/sellServerImage.png";
+            var sellHackerImage = new Image();
+            sellHackerImage.src = "images/sellHackerImage.png";
+            var sellSchoolImage = new Image();
+            sellSchoolImage.src = "images/sellSchoolImage.png";
+            var sellInternetSecurity = new Image();
+            sellInternetSecurity.src = "images/sellInternetSecurityImage.png";
+            var notificationImage = new Image();
+            notificationImage.src = "images/notificationImage.png";
+            var notificationHeaderPanel = new Image();
+            notificationHeaderPanel.src = "images/notificationHeaderPanel.png";
+
+
+            var turnCount = 0;
+
+            var won = false;
+            var lost = false;
+            var lossScreenLeftX = -1000;
+            var lossScreenRightX = -1000; //they're jump into view when the player loses
+            var lossScreenLeft = new Image();
+            lossScreenLeft.src = "images/lossScreenLeft.png";
+            var lossScreenRight = new Image();
+            lossScreenRight.src = "images/lossScreenRight.png";
+
+            canvas.addEventListener("mousedown", doMouseDown, false);
+
+            var regions = []; //the countries
+
+
+            var hq = {
+                name: "HQ",
+                level: 1,
+                x: 500,
+                y: 130,
+                w: 25,
+                h: 20,
+                numHackers: 1,
+                eduLevel: 1,
+                numServers: 1,
+                serverLevel: 1,
+                techLevel: 0,
+                money: 2055,
+                info: 50,
+                dead: false
+                        //techLevel: # hackers * eduLevel + # servers * serverLevel
+            };
+            //creates the regions
+            regions.push({
+                name: "Russia",
+                level: 7,
+                x: 730,
+                y: 0,
+                w: 340,
+                h: 90,
+                numHackers: 10,
+                eduLevel: 2,
+                numServers: 10,
+                serverLevel: 3,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "Mongolia",
+                level: 2,
+                x: 870,
+                y: 90,
+                w: 90,
+                h: 50,
+                numHackers: 2,
+                eduLevel: 2,
+                numServers: 1,
+                serverLevel: 1,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "China",
+                level: 9,
+                x: 850,
+                y: 140,
+                w: 170,
+                h: 80,
+                numHackers: 15,
+                eduLevel: 4,
+                numServers: 5,
+                serverLevel: 6,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "N. Korea",
+                level: 6,
+                x: 1000,
+                y: 120,
+                w: 50,
+                h: 20,
+                numHackers: 3,
+                eduLevel: 2,
+                numServers: 3,
+                serverLevel: 4,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "Japan",
+                level: 5,
+                x: 1040,
+                y: 150,
+                w: 40,
+                h: 90,
+                numHackers: 6,
+                eduLevel: 3,
+                numServers: 2,
+                serverLevel: 6,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "India",
+                level: 5,
+                x: 820,
+                y: 220,
+                w: 80,
+                h: 90,
+                numHackers: 5,
+                eduLevel: 2,
+                numServers: 5,
+                serverLevel: 3,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "Kazakhstan",
+                level: 2,
+                x: 750,
+                y: 130,
+                w: 100,
+                h: 90,
+                numHackers: 1,
+                eduLevel: 2,
+                numServers: 1,
+                serverLevel: 1,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "Iran",
+                level: 2,
+                x: 770,
+                y: 220,
+                w: 50,
+                h: 60,
+                numHackers: 1,
+                eduLevel: 2,
+                numServers: 1,
+                serverLevel: 1,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "Germany",
+                level: 7,
+                x: 700,
+                y: 150,
+                w: 50,
+                h: 50,
+                numHackers: 5,
+                eduLevel: 6,
+                numServers: 10,
+                serverLevel: 2,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "Sweden",
+                level: 8,
+                x: 700,
+                y: 60,
+                w: 30,
+                h: 70,
+                numHackers: 7,
+                eduLevel: 7,
+                numServers: 2,
+                serverLevel: 7,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "France",
+                level: 5,
+                x: 650,
+                y: 190,
+                w: 50,
+                h: 50,
+                numHackers: 3,
+                eduLevel: 5,
+                numServers: 5,
+                serverLevel: 2,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "Egypt",
+                level: 4,
+                x: 670,
+                y: 290,
+                w: 70,
+                h: 50,
+                numHackers: 4,
+                eduLevel: 3,
+                numServers: 2,
+                serverLevel: 2,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "Sudan",
+                level: 1,
+                x: 665,
+                y: 340,
+                w: 80,
+                h: 60,
+                numHackers: 1,
+                eduLevel: 1,
+                numServers: 1,
+                serverLevel: 1,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "Congo",
+                level: 1,
+                x: 630,
+                y: 400,
+                w: 60,
+                h: 60,
+                numHackers: 1,
+                eduLevel: 1,
+                numServers: 1,
+                serverLevel: 1,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "S. Africa",
+                level: 3,
+                x: 580,
+                y: 460,
+                w: 125,
+                h: 60,
+                numHackers: 3,
+                eduLevel: 2,
+                numServers: 1,
+                serverLevel: 3,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "Nigeria",
+                level: 2,
+                x: 560,
+                y: 400,
+                w: 70,
+                h: 60,
+                numHackers: 2,
+                eduLevel: 1,
+                numServers: 2,
+                serverLevel: 1,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "Chad",
+                level: 2,
+                x: 585,
+                y: 340,
+                w: 80,
+                h: 60,
+                numHackers: 2,
+                eduLevel: 1,
+                numServers: 2,
+                serverLevel: 1,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "Algeria",
+                level: 2,
+                x: 540,
+                y: 310,
+                w: 60,
+                h: 30,
+                numHackers: 3,
+                eduLevel: 1,
+                numServers: 1,
+                serverLevel: 1,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "Canada",
+                level: 7,
+                x: 250,
+                y: 20,
+                w: 200,
+                h: 100,
+                numHackers: 5,
+                eduLevel: 8,
+                numServers: 3,
+                serverLevel: 3,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "USA",
+                level: 10,
+                x: 260,
+                y: 120,
+                w: 150,
+                h: 80,
+                numHackers: 8,
+                eduLevel: 8,
+                numServers: 9,
+                serverLevel: 4,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "Mexico",
+                level: 4,
+                x: 280,
+                y: 200,
+                w: 90,
+                h: 40,
+                numHackers: 3,
+                eduLevel: 4,
+                numServers: 2,
+                serverLevel: 2,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "Brazil",
+                level: 4,
+                x: 320,
+                y: 280,
+                w: 90,
+                h: 100,
+                numHackers: 6,
+                eduLevel: 2,
+                numServers: 2,
+                serverLevel: 2,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "Peru",
+                level: 3,
+                x: 270,
+                y: 280,
+                w: 50,
+                h: 80,
+                numHackers: 3,
+                eduLevel: 2,
+                numServers: 3,
+                serverLevel: 1,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "Argentina",
+                level: 3,
+                x: 330,
+                y: 380,
+                w: 70,
+                h: 100,
+                numHackers: 3,
+                eduLevel: 2,
+                numServers: 3,
+                serverLevel: 1,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+            regions.push({
+                name: "Australia",
+                level: 6,
+                x: 950,
+                y: 400,
+                w: 120,
+                h: 75,
+                numHackers: 4,
+                eduLevel: 6,
+                numServers: 3,
+                serverLevel: 4,
+                techLevel: 0,
+                info: 0,
+                dead: false
+            });
+
+            var menu = 0; //which screen the user is currently on (1-4)
+            var saved = false; //if canvas is saved
+            var x;
+            //var translated = true; //if canvas has been translated
+            var canvasX;
+            var canvasY;
+
+            var notifications = []; //array for notifications because canvas doesn't support multi line text
+            var displayX = false;
+
+            var maxLetters = 0;
+            //var letters = ["$", " ", "V", "I", "C", "T", "O", "R", "Y", "$", " ", "C", "R", "E", "D", "I", "T", "S", ":", "T", "O", "M", "S", "A", "M", "J", "E", "R", "E", "M", "Y"]; //letters that appear if you win
+            var letters = "VICTORYCREDITS:TOM YANSAM MACPHERSONJEREMY KARSIKAS";
+            var frameCounter = 0;
+            var letterX = 200;
+            var letterY = 200;
+
+            var displayCountryName = "";
+            var displayCountryTechLevel = "";
+            var displayCountryLevel = "";
+            var displayCountryEduLevel = "";
+            var displayCountryNumHackers = "";
+            var displayCountryNumServers = "";
+            var displayCountryServerLevel = "";
+            var displayCountryInfo = "";
+            var countryClicked = false;
+
+            var items = []; //the things you can buy
+            items.push({
+                name: "Hackers",
+                x: 1555,
+                y: 105,
+                w: 165,
+                h: 85,
+                price: 100,
+                //pricePerTurn: 10
+            });
+            items.push({
+                name: "School",
+                x: 1955,
+                y: 105,
+                w: 165,
+                h: 85,
+                price: 1200,
+                //pricePerTurn: 50
+            });
+            items.push({
+                name: "Server",
+                x: 1555,
+                y: 300,
+                w: 165,
+                h: 85,
+                price: 1500,
+                //pricePerTurn: 25
+            });
+            items.push({
+                name: "Internet Security",
+                x: 1955,
+                y: 300,
+                w: 165,
+                h: 85,
+                price: 150,
+                //pricePerTurn: 0
+            });
+
+            var hqClicked = false;
+            function doMouseDown(event) {
+                //countryClicked = false;
+                //console.log("mouse down");
+                if (!lost && !firstLoad) {
+                    canvasX = event.pageX; //gets coordinate from page
+                    canvasY = event.pageY; //gets coordinate from page
+
+                    canvasX -= canvas.offsetLeft; //subtracts the offset so coordinate is from the canvas
+                    canvasY -= canvas.offsetTop; //subtracts the offset so coordinate is from the canvas
+                    //alert(canvasX + ", " + canvasY);
+                    if (menu === 0) {
+                        //if (canvasX >= 220) {
+                        for (var i = 0; i < regions.length; i++) { //loops through the countries {
+                            if (canvasX >= 220 && !regions[i].dead) {
+                                if (((canvasX > regions[i].x) && (canvasX < (regions[i].x + regions[i].w))) && ((canvasY > regions[i].y) && (canvasY < (regions[i].y + regions[i].h)))) { //if it is between the coordinates of a country
+                                    countryClicked = true;
+                                    hqClicked = false;
+                                    //stores the country name and details for display later
+                                    displayCountryName = regions[i].name;
+                                    displayCountryNumHackers = regions[i].numHackers;
+                                    displayCountryEduLevel = regions[i].eduLevel;
+                                    displayCountryNumServers = regions[i].numServers;
+                                    displayCountryServerLevel = regions[i].serverLevel;
+                                    displayCountryTechLevel = regions[i].techLevel;
+                                    displayCountryLevel = regions[i].level;
+                                    displayCountryInfo = regions[i].info;
+                                    i = regions.length;
+                                } else {
+                                    countryClicked = false;
+                                    if ((canvasX > hq.x) && (canvasX < (hq.x + hq.w)) && ((canvasY > hq.y) && (canvasY < (hq.y + hq.h)))) {
+                                        hqClicked = true;
+                                        displayCountryName = hq.name;
+                                        displayCountryNumHackers = hq.numHackers;
+                                        displayCountryEduLevel = hq.eduLevel;
+                                        displayCountryNumServers = hq.numServers;
+                                        displayCountryServerLevel = hq.serverLevel;
+                                        displayCountryTechLevel = hq.techLevel;
+                                        displayCountryLevel = hq.level;
+                                        //displayCountryInfo = hq.info;
+                                    } else {
+                                        countryClicked = false;
+                                        hqClicked = false;
+                                    }
+                                }
+                            }
+
+
+                        }
+                        //ctx.strokeRect(180, 100, 20, 20);
+
+                        if ((canvasX > 180) && (canvasX < 200) && (canvasY > 100) && (canvasY < 120)) {
+                            for (i = 0; i < notifications.length; i++) {
+                                doneAnimating.pop();
+                                textXs.pop();
+                                notifications.pop();
+                                i--;
+
+                            }
+                            displayX = false;
+                        }
+
+                        updatePanel();
+
+
+                    } else if (menu === 1) { //buy menu
+                        canvasX += 1100;
+
+                        for (var i = 0; i < items.length; i++) {
+                            if ((canvasX > items[i].x) && (canvasX < (items[i].x + items[i].w))) {
+                                if ((canvasY > items[i].y) && (canvasY < (items[i].y + items[i].h))) {
+                                    hq.money -= items[i].price;
+
+                                    //user can't purchase item if they don't have enough money
+                                    if (hq.money < 0) {
+                                        alert("Unable to complete transaction");
+                                        hq.money += items[i].price;
+                                    } else {
+                                        if (i === 0) {
+                                            hq.numHackers++;
+                                        } else if (i === 1) {
+                                            hq.eduLevel++;
+                                        } else if (i === 2) {
+                                            hq.numServers++;
+                                        } else if (i === 3) {
+                                            hq.serverLevel++;
+                                        }
+                                    }
+
+
+                                    updatePanel();
+                                }
+                            }
+                        }
+                    } else if (menu === 2) { //sell menu
+                        canvasX += 1100;
+
+                        for (var i = 0; i < items.length; i++) {
+                            if ((canvasX > items[i].x) && (canvasX < (items[i].x + items[i].w))) {
+                                if ((canvasY > items[i].y) && (canvasY < (items[i].y + items[i].h))) {
+                                    hq.money += items[i].price / 2; //user sells with half price
+                                    if (i === 0) {
+                                        if (hq.numHackers <= 0) {
+                                            alert("Unable to sell item");
+                                            hq.money -= items[i].price / 2; //returns the sell price if it user doesn't have item
+                                        } else {
+                                            hq.numHackers--;
+                                        }
+                                    } else if (i === 1) {
+                                        if (hq.eduLevel <= 0) {
+                                            alert("Unable to sell item");
+                                            hq.money -= items[i].price / 2;
+                                        } else {
+                                            hq.eduLevel--;
+                                        }
+                                    } else if (i === 2) {
+                                        if (hq.numServers <= 0) {
+                                            alert("Unable to sell item");
+                                            hq.money -= items[i].price / 2;
+                                        } else {
+                                            hq.numServers--;
+                                        }
+                                    } else if (i === 3) {
+                                        if (hq.serverLevel <= 0) {
+                                            alert("Unable to sell item");
+                                            hq.money -= items[i].price / 2;
+                                        } else {
+                                            hq.serverLevel--;
+                                        }
+                                    }
+                                    updatePanel();
+                                }
+                            }
+                        }
+                        //ctx.fillRect(2151, 10, 101, 56);
+                        //the user clicks the sell info button
+                        console.log(canvasX + ", " + canvasY);
+                        if (canvasX >= 2050 && canvasX <= 2151 && canvasY >= 10 && canvasY <= 70) {
+                            var amount = prompt("How much information would you like to sell?");
+                            if (hq.info >= Math.floor(amount) && Math.floor(amount) > 0) {
+                                hq.info -= Math.floor(amount);
+                                hq.money += Math.floor(amount) * (1 + turnCount);
+                            } else {
+                                alert("Unable to sell that amount of information.");
+                            }
+
+                        }
+                    }
+                    //console.log(countryClicked);
+                }
+
+            }
+            function updatePanel() {
+
+                hq.techLevel = Math.floor((hq.numHackers + (hq.numHackers * 0.5 * hq.eduLevel)) + (hq.numServers + (hq.numServers * hq.serverLevel)))
+				if(hq.techLevel < 1) {
+					hq.techLevel = 1;
+				}
+			  hq.level = Math.floor(Math.sqrt(hq.techLevel));
+                var countryName = hq.name;
+                var countryNumHackers = hq.numHackers;
+                var countryEduLevel = hq.eduLevel;
+                var countryNumServers = hq.numServers;
+                var countryServerLevel = hq.serverLevel;
+                var countryTechLevel = hq.techLevel;
+                var countryLevel = hq.level;
+
+                //the amount of information that a country has available is shown on their icon
+                ctx.fillStyle = "black";
+                ctx.font = "20px Consolas";
+                for (var i = 0; i < regions.length; i++) {
+                    if (!regions[i].dead) {
+                        ctx.fillText(regions[i].techLevel, regions[i].x + 2, regions[i].y + 15);
+                    }
+                }
+
+                ctx.fillStyle = "black";
+                ctx.font = "30px Consolas";
+
+
+
+
+                if (countryClicked) {
+                    ctx.fillText(displayCountryInfo, 15, 536);
+                    ctx.fillText(displayCountryName, 10, 108); //displays country name
+                    //and country's information
+                    ctx.fillText(displayCountryNumHackers, 15, 195);
+                    ctx.fillText(displayCountryEduLevel, 15, 282);
+                    ctx.fillText(displayCountryNumServers, 15, 367);
+                    ctx.fillText(displayCountryServerLevel, 15, 454);
+
+                    ctx.fillText(displayCountryLevel, 156, 536);
+                }
+                if (hqClicked) {
+                    ctx.fillText(displayCountryTechLevel, 15, 536);
+                    ctx.fillText(displayCountryName, 10, 108); //displays country name
+                    //and country's information
+                    ctx.fillText(displayCountryNumHackers, 15, 195);
+                    ctx.fillText(displayCountryEduLevel, 15, 282);
+                    ctx.fillText(displayCountryNumServers, 15, 367);
+                    ctx.fillText(displayCountryServerLevel, 15, 454);
+
+                    ctx.fillText(displayCountryLevel, 156, 536);
+                }
+
+
+                //hq's details on the buy menu, AND the sell menu
+                ctx.fillText(countryName, 1115, 108);
+                ctx.fillText(countryNumHackers, 1115, 195);
+                ctx.fillText(countryEduLevel, 1115, 282);
+                ctx.fillText(countryNumServers, 1115, 367);
+                ctx.fillText(countryServerLevel, 1115, 454);
+                ctx.fillText(countryTechLevel, 1115, 536);
+                ctx.fillText(countryLevel, 1256, 536);
+                //the sell menu
+                ctx.fillText(countryName, 2215, 108);
+                ctx.fillText(countryNumHackers, 2215, 195);
+                ctx.fillText(countryEduLevel, 2215, 282);
+                ctx.fillText(countryNumServers, 2215, 367);
+                ctx.fillText(countryServerLevel, 2215, 454);
+                ctx.fillText(countryTechLevel, 2215, 536);
+                ctx.fillText(countryLevel, 2356, 536);
+            }
+
+            function turnStart() {
+                attacksRemaining = 2 + Math.floor(turnCount / 2.5);
+                for (var i = 0; i < regions.length; i++) {
+                    if (!firstLoad && !regions[i].dead) { //so the values dont change on the first load
+                        if (regions[i].techLevel < 100 && !regions[i].dead) {
+                            var randomUpgrade = Math.floor(Math.random() * 4); //random # 0,1,2,3
+                            switch (randomUpgrade) {
+                                case 0:
+                                    regions[i].numHackers++;
+                                    break;
+                                case 1:
+                                    regions[i].eduLevel++;
+                                    break;
+                                case 2:
+                                    regions[i].numServers++;
+                                    break;
+                                case 3:
+                                    regions[i].serverLevel++;
+                                    break;
+                            }
+                        }
+                    }
+                    if (!regions[i].dead) {
+                        regions[i].techLevel = Math.floor((regions[i].numHackers + (regions[i].numHackers * 0.5 * regions[i].eduLevel)) + (regions[i].numServers + (regions[i].numServers * regions[i].serverLevel)));
+
+                    }
+					
+					if (regions[i].techLevel > 100) {
+						regions[i].techLevel = 100;
+					}
+					if(regions[i].techLevel < 1) {
+						regions[i].techLevel = 1;
+					}
+                    regions[i].level = Math.floor(Math.sqrt(regions[i].techLevel));
+                    if (regions[i].info < 150) { //makes it so their information can stack up
+                        regions[i].info = Math.floor(regions[i].techLevel * 1.5);
+                    }
+
+                }
+                //cost per turns
+                hq.money -= hq.numHackers * 15;
+                hq.money -= hq.eduLevel * 30;
+                hq.money -= hq.numServers * 10;
+
+                turnCount++;
+
+                menu = 0;
+                updatePanel();
+
+
+            }
+
+
+            var firstLoad = true;
+            var doneAnimating = [];
+            var textXs = [];
+
+            function draw() {
+                if (firstLoad) {
+                    turnStart();
+                    firstLoad = false;
+
+                }
+
+
+
+
+                if (!saved) { //if canvas hasn't been saved yet
+                    ctx.save(); //saves the current state of canvas
+                    saved = true; //sets saved to true so it doesn't save again
+                }
+
+                ctx.clearRect(0, 0, 5000, 570);
+
+                ctx.restore(); //restores it to previous saved state
+                ctx.save(); //saves it again so the next loop can restore
+
+                //ctx.translate(0, 0);
+
+                //changes the text of the left button depending on what menu user is on
+                if (menu !== 0) {
+                    document.getElementById("attackBackButton").innerHTML = "Back";
+                } else {
+                    document.getElementById("attackBackButton").innerHTML = "Launch Attack";
+                }
+
+                //disables or enables the attack button depending on if a country was clicked
+                if (!countryClicked && menu === 0) {
+                    document.getElementById("attackBackButton").disabled = true;
+                } else {
+                    document.getElementById("attackBackButton").disabled = false;
+                }
+                if (lost || won) {
+                    document.getElementById("attackBackButton").style.visibility = 'hidden';
+                    document.getElementById("buy").style.visibility = 'hidden';
+                    document.getElementById("sell").style.visibility = 'hidden';
+                    document.getElementById("turn").style.visibility = 'hidden';
+                    /*
+                     document.getElementById("attackBackButton").disabled = true;
+                     document.getElementById("buy").disabled = true;
+                     document.getElementById("sell").disabled = true;
+                     document.getElementById("turn").disabled = true;
+                     */
+                }
+
+                if (menu === 1) {
+                    ctx.translate(-1100, 0);
+                    ctx.fillStyle = "blue";
+                    ctx.fillRect(3000, 0, 1100, 570);
+                } else if (menu === 2) {
+                    ctx.translate(-2200, 0);
+                    ctx.fillStyle = "blue";
+                    ctx.fillRect(1100, 0, 1100, 570);
+                } else if (menu === 3) {
+                    ctx.translate(-3000, 0);
+                    ctx.fillStyle = "green";
+                    ctx.fillRect(2050, 0, 1100, 570);
+                }
+
+                ctx.fillStyle = "#007ACC";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                var numDead = 0;
+                for (var i = 0; i < regions.length; i++) { //draws the countries
+                    if (!regions[i].dead) {
+                        if (regions[i].level === 1) {
+                            ctx.fillStyle = "#FFFF75";
+                        } else if (regions[i].level === 2) {
+                            ctx.fillStyle = "#FFFF33";
+                        } else if (regions[i].level === 3) {
+                            ctx.fillStyle = "#FFCC00";
+                        } else if (regions[i].level === 4) {
+                            ctx.fillStyle = "#FFA319";
+                        } else if (regions[i].level === 5) {
+                            ctx.fillStyle = "#FF6600";
+                        } else if (regions[i].level === 6) {
+                            ctx.fillStyle = "#FF4719";
+                        } else if (regions[i].level === 7) {
+                            ctx.fillStyle = "#E62E00";
+                        } else if (regions[i].level === 8) {
+                            ctx.fillStyle = "#FF3333";
+                        } else if (regions[i].level === 9) {
+                            ctx.fillStyle = "#FF0000";
+                        } else if (regions[i].level === 10) {
+                            ctx.fillStyle = "#990000";
+                        } else {
+                            ctx.fillStyle = "white";
+                        }
+                    } else {
+                        numDead++;
+                        ctx.fillStyle = "white";
+                    }
+
+
+                    ctx.fillRect(regions[i].x, regions[i].y, regions[i].w, regions[i].h);
+                    ctx.strokeRect(regions[i].x, regions[i].y, regions[i].w, regions[i].h);
+                }
+                if (numDead === regions.length) {
+                    won = true;
+                }
+
+
+
+                //draws the HQ
+                ctx.fillStyle = "green";
+                ctx.fillRect(hq.x, hq.y, hq.w, hq.h);
+                ctx.strokeRect(hq.x, hq.y, hq.w, hq.h);
+                ctx.fillStyle = "white";
+                ctx.font = "15px Arial";
+                ctx.fillText("HQ", hq.x + 1, hq.y + 15);
+
+                //shows the information panel based on what is should be showing
+                if ((hqClicked || countryClicked) && menu === 0) {
+
+                    if (countryClicked) {
+                        ctx.drawImage(informationPanel2, 0, 0);
+                    }
+                    if (hqClicked) {
+                        ctx.drawImage(informationPanel, 0, 0);
+                    }
+
+                } else if (menu === 1) {
+                    ctx.drawImage(informationPanel, 1100, 0);
+                    ctx.drawImage(buyMenuBackground, 1320, 0);
+                    ctx.drawImage(buyHackerImage, 1350, 85);
+                    ctx.drawImage(buySchoolImage, 1750, 85);
+
+                    //ctx.strokeRect(1955, 105, 165, 85);
+
+                    ctx.drawImage(buyServerImage, 1350, 275);
+                    ctx.drawImage(buyInternetSecurityImage, 1750, 275);
+
+                } else if (menu === 2) {
+                    ctx.drawImage(informationPanel, 2200, 0);
+                    ctx.drawImage(sellMenuBackground, 2420, 0);
+                    ctx.drawImage(sellHackerImage, 2450, 85);
+                    ctx.drawImage(sellServerImage, 2450, 275);
+                    ctx.drawImage(sellSchoolImage, 2850, 85);
+                    ctx.drawImage(sellInternetSecurity, 2850, 275);
+                } else {
+                    if (displayX) {
+                        ctx.drawImage(notificationHeaderPanel, 0, 0);
+                    } else {
+                        ctx.drawImage(informationDefaultImage, 0, 0);
+                    }
+                    for (var i = 0; i < notifications.length; i++) {
+                        //console.log(i + " " + doneAnimating);
+                        if (!doneAnimating[i]) {
+                            if (textXs[i] < 10) {
+                                textXs[i] += 2;
+                            } else {
+                                doneAnimating[i] = true;
+                            }
+                        }
+
+                        //ctx.drawImage(notificationHeaderPanel, 0,0);
+                        if (i % 3 === 0) {
+                            //ctx.fillStyle = "white";
+                            ctx.drawImage(notificationImage, textXs[i] - 6, 90 + i * 25);
+                            //ctx.fillRect(textXs[i], 95 + i * 25, 180, 50);
+                        }
+
+                        ctx.fillStyle = "black";
+                        ctx.fillText(notifications[i], textXs[i], 110 + i * 25);
+
+                    }
+
+                }
+
+
+
+
+                for (var i = 0; i < items.length; i++) { //draws the items
+                    ctx.fillStyle = "black";
+                    ctx.font = "35px Consolas";
+                    ctx.fillText("$" + items[i].price, items[i].x + 40, items[i].y + 120);
+                    ctx.fillText("$" + items[i].price / 2, items[i].x + 1140, items[i].y + 120);
+                }
+
+                //only displays the x if there are notifications and no countries are clicked
+                if (notifications.length > 0 && !countryClicked && !hqClicked) {
+                    displayX = true;
+                } else {
+                    displayX = false;
+                }
+
+                //shows the button
+                if (displayX) {
+                    //clear notifications button 
+                    ctx.font = "20px Arial";
+                    ctx.strokeRect(180, 100, 20, 20);
+                    ctx.fillText("X", 183, 118);
+                }
+
+
+                //updates the panel's information
+                updatePanel();
+                ctx.font = "25px Consolas";
+                ctx.fillText("Attacks Remaining: " + attacksRemaining + "  |  Your Info: " + hq.info + "  |  Your money: $" + hq.money, 220, 550);
+
+
+                ctx.font = "40px Consolas";
+
+                //draw's your money on they buy and sell menus
+                ctx.fillText(hq.money, 1760, 525);
+                ctx.fillText(hq.money, 2860, 525);
+                ctx.fillText(hq.info, 3010, 51);
+                //ctx.fillRect(3150, 10, 101, 56);
+
+                //vin screen
+                if (won) {
+                    document.body.style.background = "black";
+                    //var skip = false;
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(0, 0, 1100, 565);
+                    frameCounter++;
+                    //console.log(frameCounter);
+                    ctx.fillStyle = "white";
+                    letterX = 250;
+                    letterY = 150;
+
+                    ctx.fillText("$", 200, 150);
+                    for (var i = 0; i < maxLetters; i++) {
+                        ctx.fillText(letters[i], letterX, letterY);
+                        letterX += 25;
+                        if (i === 6) {
+                            letterX = 250;
+                            letterY += 100;
+                        }
+                        if (i === 14) {
+                            letterX = 250;
+                            letterY += 50;
+                        }
+                        if (i === 21) {
+                            letterX = 250;
+                            letterY += 50;
+                        }
+                        if (i === 35) {
+                            letterX = 250;
+                            letterY += 50;
+                        }
+                    }
+
+                    if (Math.floor(frameCounter / 18) % 2 === 0) {
+                        ctx.fillText("_", letterX, letterY);
+                    }
+
+
+                    if (maxLetters === 0 || maxLetters === 7 || maxLetters === 15) {
+                        if ((frameCounter % 200) === 0) {
+                            maxLetters++;
+                        }
+                    } else if (maxLetters < letters.length) {
+                        if ((frameCounter % 10) === 0) {
+                            maxLetters++;
+                        }
+                    }
+                    /*
+                     else if (maxLetters < 20) {
+                     if ((frameCounter % 10) === 0) {
+                     maxLetters++;
+                     }
+                     
+                     } else if (maxLetters < 63) {
+                     if ((frameCounter % 10) === 0) {
+                     maxLetters++;
+                     }
+                     
+                     }
+                     */
+                    console.log(maxLetters);
+
+
+                }
+                if (lost) {
+                    if (lossScreenLeftX <= -5) {
+                        lossScreenLeftX += 10;
+                    }
+                    if (lossScreenRightX >= 560) {
+                        lossScreenRightX -= 10;
+                    }
+                    ctx.drawImage(lossScreenLeft, lossScreenLeftX, 0);
+                    ctx.drawImage(lossScreenRight, lossScreenRightX, 0);
+                }
+                requestAnimationFrame(draw);
+            }
+
+            var attacksRemaining = 2;
+            //p1 is attacker, p2 is receiver
+            function attack(p1, p2) {
+                if (p1.name === "HQ") {
+                    attacksRemaining--;
+                }
+
+                //has the text fly in
+                var output = "";
+                //output += p1.name + " attacked " + p2.name + ".";
+
+                //NO MATTER WHAT, THERE IS A CHANCE OF FAILURE
+                //the boolean variable that handles the win/loss
+                var victory = false;
+                if (!p1.dead && !p2.dead) {
+                    notifications.push(p1.name + " attacked " + p2.name);
+                    doneAnimating.push(false);
+                    textXs.push(-100);
+                    if (p1.numHackers > 0) {
+                        //the p1's techLevel is > the targets:
+                        if (p1.techLevel > p2.techLevel) {
+                            //creates a random number based on how much stronger p1 is than p2
+                            var total = p1.techLevel + p2.techLevel;
+                            var outcome = Math.floor(Math.random() * total);
+                            console.log(outcome + ", " + total);
+                            if (outcome > p2.techLevel) {
+                                console.log("victory!");
+                                if (p1.name === "HQ") {
+                                    notifications.push(p1.name + " wins. " + "+" + p2.info + " info.");
+                                    notifications.push(p2.name + " is destroyed.");
+                                    p2.dead = true;
+                                    doneAnimating.push(false);
+                                    textXs.push(-100);
+                                    doneAnimating.push(false);
+                                    textXs.push(-100);
+                                    //output += p1.name + " wins. " + p2.info + " info is gained, " + p2.name + " is destroyed";
+                                    p1.info += p2.info;
+                                    p1.money += Math.floor(Math.random() * 50 + 1) * 10;
+                                    p2.info = 0;
+                                } else {
+                                    notifications.push(p1.name + " wins. " + (Math.floor(p2.info / 2) + 10) + " info lost");
+                                    notifications.push(" "); //creates a new line so the notifications work
+                                    doneAnimating.push(false);
+                                    textXs.push(-100);
+                                    doneAnimating.push(false);
+                                    textXs.push(-100);
+                                    //output += p1.name + " wins." + (Math.floor(p2.info / 2) + 10) + " info lost";
+                                    p1.info += Math.floor(p2.info / 2) + 10;
+                                    p2.info = Math.floor(p2.info / 2) - 10;
+                                }
+
+                                victory = true;
+                            } else {
+                                if (p2.name === "HQ") {
+                                    notifications.push(p2.name + " wins. " + "+" + p1.info + " info.");
+                                    notifications.push(p1.name + " is destroyed.");
+                                    p1.dead = true;
+                                    doneAnimating.push(false);
+                                    textXs.push(-100);
+                                    doneAnimating.push(false);
+                                    textXs.push(-100);
+                                    //output += p2.name + " wins. " + p1.info + " info is gained, " + p1.name + " is destroyed";
+                                    p2.info += p1.info;
+                                    p2.money += Math.floor(Math.random() * 50 + 1) * 10;
+                                    p1.info = 0;
+                                } else {
+                                    notifications.push(p2.name + " wins. " + (Math.floor(p1.info / 2) + 10) + " info lost.");
+                                    notifications.push(" "); //creates a new line so the notifications work
+                                    doneAnimating.push(false);
+                                    textXs.push(-100);
+                                    doneAnimating.push(false);
+                                    textXs.push(-100);
+                                    //output += p2.name + " wins. " + (Math.floor(p1.info / 2) + 10) + " info lost";
+                                    p2.info += Math.floor(p1.info / 2) + 10;
+                                    p1.info = Math.floor(p1.info / 2) - 10;
+                                }
+                            }
+                        }
+
+                        //the p1's techLevel is == the targets:
+                        if (p1.techLevel === p2.techLevel) {
+                            //there's a 50/50 chance of winning
+                            var outcome = Math.floor(Math.random() * 2);
+                            console.log(outcome);
+                            if (outcome > 0) {
+							if(p1.name === "HQ") {
+								notifications.push(p1.name + " wins. " + "-" + (Math.floor(p2.info / 2) + 10) + " info.");
+							} else {
+								notifications.push(p1.name + " wins. " + (Math.floor(p2.info / 2) + 10) + " info lost.");
+							}
+                                notifications.push(" "); //creates a new line so the notifications work
+                                doneAnimating.push(false);
+                                textXs.push(-100);
+                                doneAnimating.push(false);
+                                textXs.push(-100);
+                                //output += p1.name + " wins." +  + " info lost";
+                                p1.info += Math.floor(p2.info / 2) + 10;
+                                p2.info = Math.floor(p2.info / 2) - 10;
+                                victory = true;
+                            } else {
+							if(p2.name === "HQ") {
+								notifications.push(p2.name + " wins. " + "-" + (Math.floor(p1.info / 2) + 10) + " info.");
+							} else {
+								notifications.push(p2.name + " wins. " + (Math.floor(p1.info / 2) + 10) + " info lost.");
+							}
+                                //notifications.push(p2.name + " wins. " + "-" + (Math.floor(p1.info / 2) + 10) + " info.");
+                                notifications.push(" "); //creates a new line so the notifications work
+                                doneAnimating.push(false);
+                                textXs.push(-100);
+                                doneAnimating.push(false);
+                                textXs.push(-100);
+                                //output += p2.name + " wins. " +  + " info lost";
+                                p2.info += Math.floor(p1.info / 2) + 10;
+                                p1.info = Math.floor(p1.info / 2) - 10;
+                            }
+                        }
+
+                        //the p1's techLevel is < the targets:
+                        if (p1.techLevel < p2.techLevel) {
+                            //creates a random number based on how much strong the country is
+                            var total = p1.techLevel + p2.techLevel;
+                            var outcome = Math.floor(Math.random() * total);
+                            console.log(outcome + ", " + total);
+
+                            if (outcome < p2.techLevel) {
+                                console.log("failure.");
+                                if (p2.name === "HQ") {
+                                    notifications.push(p2.name + " wins. " + "+" + p1.info + " info.");
+                                    notifications.push(p1.name + " is destroyed.");
+                                    p1.dead = true;
+                                    doneAnimating.push(false);
+                                    textXs.push(-100);
+                                    doneAnimating.push(false);
+                                    textXs.push(-100);
+                                    //output += p2.name + " wins. " + p1.info + " info is gained, " + p1.name + " is destroyed";
+                                    p2.info += p1.info;
+                                    p2.money += Math.floor(Math.random() * 50 + 1) * 10;
+                                    p1.info = 0;
+                                } else {
+                                    notifications.push(p2.name + " wins. " + (Math.floor(p1.info / 2) + 10) + " info lost.");
+                                    notifications.push(" "); //creates a new line so the notifications work
+                                    doneAnimating.push(false);
+                                    textXs.push(-100);
+                                    doneAnimating.push(false);
+                                    textXs.push(-100);
+                                    //output += p2.name + " wins. " +  + " info lost";
+                                    p2.info += Math.floor(p1.info / 2) + 10;
+                                    p1.info = Math.floor(p1.info / 2) - 10;
+                                }
+                            } else {
+                                console.log("victory!");
+                                if (p1.name === "HQ") {
+                                    notifications.push(p1.name + " wins. " + "+" + p2.info + " info.");
+                                    notifications.push(p2.name + " is destroyed.");
+                                    p2.dead = true;
+                                    doneAnimating.push(false);
+                                    textXs.push(-100);
+                                    doneAnimating.push(false);
+                                    textXs.push(-100);
+                                    //output += p1.name + " wins. " + p2.info + " info is gained, " + p2.name + " is destroyed";
+                                    p1.info += p2.info;
+                                    p1.money += Math.floor(Math.random() * 50 + 1) * 10;
+                                    p2.info = 0;
+                                } else {
+                                    notifications.push(p2.name + " wins. " + (Math.floor(p2.info / 2) + 10) + " info lost.");
+                                    notifications.push(p1.name + " is destroyed.");
+                                    p1.dead = true;
+                                    doneAnimating.push(false);
+                                    textXs.push(-100);
+                                    doneAnimating.push(false);
+                                    textXs.push(-100);
+                                    //output += p1.name + " wins. " + (Math.floor(p2.info / 2) + 10) + " info lost";
+                                    p1.info += Math.floor(p2.info / 2) + 10;
+                                    p2.info = Math.floor(p2.info / 2) - 10;
+                                }
+
+                                victory = true;
+                            }
+                        }
+					if(notifications.length > 18) { //it's not fitting in the notification area anymore
+						var numToRemove = notifications.length - 18;
+						//numToRemove /= 3;
+						for(var i = 0; i < numToRemove; i++) {
+							doneAnimating.shift();
+							textXs.shift();
+							notifications.shift(); //cuts out the oldest notifications
+						}
+					}
+                        //resets the object of the regions
+                        if (p1.info <= 0) {
+                            if (p1.name === "HQ") {
+                                lost = true;
+                                lossScreenLeftX = -550;
+                                lossScreenRightX = 1100;
+                            }
+                            reset(p1);
+                        }
+                        if (p2.info <= 0) {
+                            if (p2.name === "HQ") {
+                                lost = true;
+                                lossScreenLeftX = -550;
+                                lossScreenRightX = 1100;
+                            }
+                            reset(p2);
+                        }
+
+                        //animatingText = true;
+                        //doneAnimating.push(false);
+                        //textXs.push(-100);
+
+                        //notifications.push(output);
+                        console.log(p1.name + " attacked " + p2.name);
+
+                    } else if (p1.name === "HQ") {
+                        alert("You don't have any hackers to carry out the deed.");
+                    }
+                }
+
+
+                //ctx.fillText(notifications[i], 10, 100 + i * 20);
+            }
+
+            function mDown(button) {
+                if (button === 0) {
+                    if (menu === 0) { //user attacks a country.
+                        for (var i = 0; i < regions.length; i++) {
+                            if (displayCountryName === regions[i].name) {
+                                if (attacksRemaining > 0) {
+                                    attack(hq, regions[i]);
+                                }
+                            }
+                        }
+                        countryClicked = false;
+                        hqClicked = false;
+                    } else { //they clicked the "back" button
+                        countryClicked = false;
+                        hqClicked = false;
+                        menu = 0;
+                        updatePanel();
+                    }
+                } else if (button === 1) {
+                    menu = 1;
+                } else if (button === 2) {
+                    menu = 2;
+                } else if (button === 3) { //starts a new turn
+                    turnStart();
+                    updatePanel();
+
+                    //random country will attack you each turn
+				//the country will probably be stronger than you
+				var attackYesNo = 0;
+				var rci = Math.floor(Math.random() * regions.length); //random country index;
+				while(attackYesNo === 0 || attackYesNo === 1) {
+					while(regions[rci].dead) { //gets a country that isnt dead
+						var rci = Math.floor(Math.random() * regions.length); //random country index
+					}
+					if(regions[rci].techLevel < hq.techLevel) { //if they're lower than hq, they only have a 33% chance of following up
+						attackYesNo = Math.floor(Math.random() * 3); //0-2
+					} else {
+						attackYesNo = 2; //if they're techLevel >= HQ's, they attack.
+					}	
+				}
+                  /*
+				while(regions[rci].dead) {
+					rci = Math.floor(Math.random() * regions.length); //random country index
+				}
+				*/
+                    attack(regions[rci], hq);
+
+                    var rNum = Math.floor((Math.random() * 3) + 1);
+                    if (rNum === 1) { //1 in 3 chance a random country will attack another random country
+                        var r1 = Math.floor(Math.random() * regions.length);
+                        var r2 = Math.floor(Math.random() * regions.length);
+                        //so countries who are dead cannot attack.
+                        while (regions[r1].name === "Destroyed" || regions[r2].name === "Destroyed" || r1 == r2) {
+                            r1 = Math.floor(Math.random() * regions.length);
+                            r2 = Math.floor(Math.random() * regions.length);
+                        }
+                        attack(regions[r1], regions[r2]);
+                    }
+                    countryClicked = false;
+                    hqClicked = false;
+                }
+            }
+
+            //makes all variables in a region object 0
+            function reset(r) {
+                r.name = "Destroyed";
+                r.level = 0;
+                r.numHackers = 0;
+                r.eduLevel = 0;
+                r.numServers = 0;
+                r.serverLevel = 0;
+                r.techlevel = 0;
+                r.info = 0;
+                r.dead = true;
+            }
+            function mDown2(obj) { //if mouse clicked
+				document.getElementById("title").innerHTML = "Data Sharks";
+                obj.innerHTML = "";
+                obj.style.backgroundColor = "#FFFFFF"; //sets button to white
+                var el = document.getElementById('start'); //deletes the element
+                el.parentNode.removeChild(el);
+                document.getElementById("attackBackButton").style.visibility = 'visible';
+                document.getElementById("buy").style.visibility = 'visible';
+                document.getElementById("sell").style.visibility = 'visible';
+                document.getElementById("turn").style.visibility = 'visible';
+                draw();
+            }
+
+            //runs the game
+            //draw();
+        </script>
+    </body>
+</html>
